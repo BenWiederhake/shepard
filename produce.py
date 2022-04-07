@@ -15,11 +15,11 @@ SAMPLE_RATE = 48000
 # Corresponds to 60dB
 DYNAMIC_RANGE = 1000
 DYNAMIC_RANGE_LOG2 = math.log2(DYNAMIC_RANGE)
-SHEPHERD_PERIOD_SAMPLES = SAMPLE_RATE * 5  # 5 seconds
-SHEPHERD_OVERTONE_POWERS = [1, 2, 4, 8]
-SHEPHERD_OVERTONE_MAXPOWER = 8
+SHEPARD_PERIOD_SAMPLES = SAMPLE_RATE * 5  # 5 seconds
+SHEPARD_OVERTONE_POWERS = [1, 2, 4, 8]
+SHEPARD_OVERTONE_MAXPOWER = 8
 
-SHEPHERD_BASE_FREQUENCY = 220  # Goes up an octave
+SHEPARD_BASE_FREQUENCY = 220  # Goes up an octave
 
 
 def sin_two_pi(x):
@@ -54,20 +54,20 @@ def compute_integer_place_near_1(coefficient):
 
 
 def amplitude_at(frequency):
-    if frequency < SHEPHERD_BASE_FREQUENCY:
+    if frequency < SHEPARD_BASE_FREQUENCY:
         return 0
-    if frequency < 2 * SHEPHERD_BASE_FREQUENCY:
-        factor = frequency / SHEPHERD_BASE_FREQUENCY
+    if frequency < 2 * SHEPARD_BASE_FREQUENCY:
+        factor = frequency / SHEPARD_BASE_FREQUENCY
         # The idea is this:
         #     progress = math.log2(factor)
         #     return (1 / DYNAMIC_RANGE) * exp(ln(DYNAMIC_RANGE) * progress)
         # However, this can be simplified:
         return factor ** DYNAMIC_RANGE_LOG2 / DYNAMIC_RANGE
 
-    if frequency > 2 * SHEPHERD_OVERTONE_MAXPOWER * SHEPHERD_BASE_FREQUENCY:
+    if frequency > 2 * SHEPARD_OVERTONE_MAXPOWER * SHEPARD_BASE_FREQUENCY:
         return 0
-    if frequency > SHEPHERD_OVERTONE_MAXPOWER * SHEPHERD_BASE_FREQUENCY:
-        factor = (2 * SHEPHERD_OVERTONE_MAXPOWER * SHEPHERD_BASE_FREQUENCY) / frequency
+    if frequency > SHEPARD_OVERTONE_MAXPOWER * SHEPARD_BASE_FREQUENCY:
+        factor = (2 * SHEPARD_OVERTONE_MAXPOWER * SHEPARD_BASE_FREQUENCY) / frequency
         return factor ** DYNAMIC_RANGE_LOG2 / DYNAMIC_RANGE
 
     return 1
@@ -76,15 +76,15 @@ def amplitude_at(frequency):
 def make_waveform():
     additional_samples = 0.0  # FIXME, can be negative, can be fractional
     waveform = []
-    base_coefficient = SHEPHERD_BASE_FREQUENCY * SHEPHERD_PERIOD_SAMPLES / (SAMPLE_RATE * math.log(2))
+    base_coefficient = SHEPARD_BASE_FREQUENCY * SHEPARD_PERIOD_SAMPLES / (SAMPLE_RATE * math.log(2))
     actual_time = compute_integer_place_near_1(base_coefficient)
-    for t in range(SHEPHERD_PERIOD_SAMPLES):  # Integer in [0, SHEPHERD_PERIOD_SAMPLES). Unit: samples
-        t_0_1 = t / SHEPHERD_PERIOD_SAMPLES  # Real in [0, 1). Unit: fraction of whole waveform
+    for t in range(SHEPARD_PERIOD_SAMPLES):  # Integer in [0, SHEPARD_PERIOD_SAMPLES). Unit: samples
+        t_0_1 = t / SHEPARD_PERIOD_SAMPLES  # Real in [0, 1). Unit: fraction of whole waveform
         t_real_0_1 = t_0_1 * actual_time  # Real in [0, 1±epsilon). Unit: fraction of whole waveform
         phase = base_coefficient * (2 ** t_real_0_1 - 1)
-        claimed_frequency = SHEPHERD_BASE_FREQUENCY * (2 ** t_0_1)
+        claimed_frequency = SHEPARD_BASE_FREQUENCY * (2 ** t_0_1)
         akku = 0
-        for power in SHEPHERD_OVERTONE_POWERS:
+        for power in SHEPARD_OVERTONE_POWERS:
             akku += sin_two_pi(phase * power) * amplitude_at(claimed_frequency * power)
         waveform.append(round(1e8 * akku))
     print(f'Final phase: {phase}, final freq: {claimed_frequency}, time factor {actual_time}, frequencies are thus off by {math.log2(actual_time) * 1200:+} cents.')
@@ -98,13 +98,13 @@ def save_waveform(waveform):
     # print(segment[:2].get_array_of_samples())
     segment = normalize(segment, headroom=10)
     # print(segment[:2].get_array_of_samples())
-    filename = time.strftime(f'shepherd_w={SAMPLE_WIDTH}_r={SAMPLE_RATE}_d={SHEPHERD_PERIOD_SAMPLES / SAMPLE_RATE}_t=%s.flac')
+    filename = time.strftime(f'shepard_w={SAMPLE_WIDTH}_r={SAMPLE_RATE}_d={SHEPARD_PERIOD_SAMPLES / SAMPLE_RATE}_t=%s.flac')
     print(f'Saving to {filename}')
     segment.export(filename, 'flac')
 
 
 def run():
-    # print('amp sanity check:', [(factor, amplitude_at(SHEPHERD_BASE_FREQUENCY * factor)) for factor in [1, 1.3, 1.8, 2, 2.1, 4, 7.9, 8.0, 8.1, 12, 15, 16]])
+    # print('amp sanity check:', [(factor, amplitude_at(SHEPARD_BASE_FREQUENCY * factor)) for factor in [1, 1.3, 1.8, 2, 2.1, 4, 7.9, 8.0, 8.1, 12, 15, 16]])
     waveform = make_waveform()
     save_waveform(waveform)
 
