@@ -26,13 +26,13 @@ def sin_two_pi(x):
     # Slow:
     # return slow_sinpi(2 * x)
     # Fast but slightly inaccurate:
-    return math.sin(2 * math.pi * x)
+    # return math.sin(2 * math.pi * x)
     # Let's go with triangles instead:
-    #effective_phase = x % 1
-    #if effective_phase < 0.5:
-    #    return effective_phase
-    #else:
-    #    return 1 - effective_phase
+    effective_phase = x % 1
+    if effective_phase < 0.5:
+        return effective_phase
+    else:
+        return 1 - effective_phase
 
 
 def compute_integer_place_near_1(coefficient):
@@ -77,17 +77,17 @@ def make_waveform():
     additional_samples = 0.0  # FIXME, can be negative, can be fractional
     waveform = []
     base_coefficient = SHEPHERD_BASE_FREQUENCY * SHEPHERD_PERIOD_SAMPLES / (SAMPLE_RATE * math.log(2))
-    extra_time = compute_integer_place_near_1(base_coefficient) - 1
+    actual_time = compute_integer_place_near_1(base_coefficient)
     for t in range(SHEPHERD_PERIOD_SAMPLES):  # Integer in [0, SHEPHERD_PERIOD_SAMPLES). Unit: samples
         t_0_1 = t / SHEPHERD_PERIOD_SAMPLES  # Real in [0, 1). Unit: fraction of whole waveform
-        t_real_0_1 = t_0_1 + (-2 * t_0_1 + 3) * t_0_1 * t_0_1 * extra_time  # Real in [0, 1±epsilon). Unit: fraction of whole waveform
+        t_real_0_1 = t_0_1 * actual_time  # Real in [0, 1±epsilon). Unit: fraction of whole waveform
         phase = base_coefficient * (2 ** t_real_0_1 - 1)
         claimed_frequency = SHEPHERD_BASE_FREQUENCY * (2 ** t_0_1)
         akku = 0
         for power in SHEPHERD_OVERTONE_POWERS:
             akku += sin_two_pi(phase * power) * amplitude_at(claimed_frequency * power)
         waveform.append(round(1e8 * akku))
-    print(f'Final phase: {phase}, final freq: {claimed_frequency}')
+    print(f'Final phase: {phase}, final freq: {claimed_frequency}, time factor {actual_time}, frequencies are thus off by {math.log2(actual_time) * 1200:+} cents.')
 
     return waveform
 
@@ -104,7 +104,7 @@ def save_waveform(waveform):
 
 
 def run():
-    print([(factor, amplitude_at(SHEPHERD_BASE_FREQUENCY * factor)) for factor in [1, 1.3, 1.8, 2, 2.1, 4, 7.9, 8.0, 8.1, 12, 15, 16]])
+    # print('amp sanity check:', [(factor, amplitude_at(SHEPHERD_BASE_FREQUENCY * factor)) for factor in [1, 1.3, 1.8, 2, 2.1, 4, 7.9, 8.0, 8.1, 12, 15, 16]])
     waveform = make_waveform()
     save_waveform(waveform)
 
